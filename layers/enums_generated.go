@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen2.go, don't edit manually
-// Generated at 2023-01-20 14:01:47.829824 +0300 MSK m=+0.000936209
+// Generated at 2023-02-03 14:40:03.840874504 +0300 MSK m=+0.001194770
 
 import (
 	"fmt"

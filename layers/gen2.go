@@ -9,7 +9,7 @@
 
 // This binary handles creating string constants and function templates for enums.
 //
-//  go run gen2.go | gofmt > enums_generated.go
+//	go run gen2.go | gofmt > enums_generated.go
 package main
 
 import (
