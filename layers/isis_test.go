@@ -132,8 +132,14 @@ func TestPacketISISHello(t *testing.T) {
 					HoldingTimer:   10,
 					PDULength:      1497,
 				},
-				Priority:           0x40,
-				DesignatedSystemId: 0x11111111111102,
+				Priority: 0x40,
+				DesignatedSystemId: struct {
+					SystemId     uint64
+					PseudonodeId byte
+				}{
+					SystemId:     0x111111111111,
+					PseudonodeId: 0x02,
+				},
 			},
 			VariableLengthFields: []CLV{
 				{

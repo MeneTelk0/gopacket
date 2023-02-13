@@ -66,16 +66,6 @@ type CLV struct {
 	Value  interface{}
 }
 
-// think OF A FUNCTION
-// func (code int) (any){
-// ...
-// }
-// returns specific type for provided code
-//
-// CLV types TO DO!!!!
-type AreaAddres struct {
-}
-
 // ///////////////////////////////////////////////
 type ISIS struct {
 	BaseLayer
@@ -94,10 +84,13 @@ type ISISHelloPkg struct {
 }
 
 type IIHvL1_L2Lan struct {
-	Base               ISISHelloPkg
-	Priority           byte
-	DesignatedSystemId uint64
-	// PseudonodeId       byte
+	Base     ISISHelloPkg
+	Priority byte
+
+	DesignatedSystemId struct {
+		SystemId     uint64
+		PseudonodeId byte
+	}
 }
 
 type IIHvP2P struct {
@@ -164,59 +157,42 @@ func (i ISISType) String() string {
 	case ISISLinkStatePDU:
 		return "ISISLinkStatePDU"
 	default:
-		return ""
+		return "No Such ISIS Type"
 	}
 }
 
 func (isis *ISIS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	//START data[25]
-
-	fmt.Println("\n\n\n\n\nCH")
 	var index int = 0
 	index += isis.decodeCommonHeader(data[0:])
-	// fmt.Println("INDEX 1 \t", index)
-	// fmt.Printf("NEW:\t %x \n", data[index])
-	// fmt.Print()
-	fmt.Println("SH")
+
 	switch isis.CH.PDUType {
 	case IIHL1, IIHL2, IIHP2P: //IIH
 		isis.Type = ISISHello
 		add, err := isis.decodeHelloPDU(data[index:])
 		if err != nil {
-			// log.Print("ERROR DECODE HELLO PDU")
 			return err
 		}
 		index += add
-		break
 
 	case L1LSP, L2LSP:
 		isis.Type = ISISLinkStatePDU
 		add := isis.decodeLspPDU(data[index:])
 		index += add
-		break
 
 	case L1PSNP, L2PSNP:
 		isis.Type = ISISPartialSequenceNumberPDU
 		add := isis.decodePsnpPDU(data[index:])
 		index += add
-		break
 
 	case L1CSNP, L2CSNP:
 		isis.Type = ISISCompleteSequenceNumberPDU
 		add := isis.decodeCsnpPDU(data[index:])
 		index += add
-		break
 
 	default:
 		fmt.Printf("Specific HEADER PARSE ERROR\n")
-		return errors.New("Unknown PDU TYPE")
+		return errors.New("unknown PDU TYPE")
 	}
-
-	fmt.Printf("CLV \t")
-	for i := index; i < index+10; i++ {
-		fmt.Printf("%x ", data[i])
-	}
-	fmt.Printf("\n")
 
 	add, err := isis.decodeCLV(data[index:])
 	if err != nil {
@@ -224,23 +200,17 @@ func (isis *ISIS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 	}
 	index += add
 
-	fmt.Println(data[index-1])
-	fmt.Printf("HELLOAfter CLV\n\n\n\n")
 	isis.Contents = data[:index]
-	// isis.Payload = data[index:]
-	isis.Payload = nil
-
+	if len(data[index:]) == 0 {
+		isis.Payload = nil
+	} else {
+		isis.Payload = data[index:]
+	}
 	return nil
 }
 
 func (isis *ISIS) decodeCommonHeader(data []byte) int {
 	index := 0
-	// fmt.Printf("CH \t")
-	// for i, _ := range data[:10] {
-
-	// 	fmt.Printf("%x ", data[i])
-	// }
-	// fmt.Printf("\n")
 
 	isis.CH.LengthIndicator = data[index] //index == 0
 	index++
@@ -253,7 +223,6 @@ func (isis *ISIS) decodeCommonHeader(data []byte) int {
 
 	isis.CH.PDUType = SpecificHeaderType(data[index] & 0x1f) //index == 3
 	index++
-	// fmt.Println(isis.CH.PDUType)
 
 	isis.CH.Version = data[index] //index == 4
 	index++
@@ -268,12 +237,6 @@ func (isis *ISIS) decodeCommonHeader(data []byte) int {
 }
 
 func (isis *ISIS) decodeHelloPDU(data []byte) (int, error) {
-	// fmt.Printf("HELLO PDU \t")
-	// for i := 0; i < 10; i++ {
-	// 	fmt.Printf("%x ", data[i])
-	// }
-	// fmt.Printf("\n")
-
 	index := 0
 
 	helloPkg := ISISHelloPkg{}
@@ -281,10 +244,8 @@ func (isis *ISIS) decodeHelloPDU(data []byte) (int, error) {
 	helloPkg.CircuitType = data[index] & 0x3 //index == 0
 	index++
 
-	bytes := []byte{0, 0}
-	bytes = append(bytes, data[index:index+6]...)
-	systemid := binary.BigEndian.Uint64(bytes)
-	helloPkg.SenderSystemId = systemid
+	systemid := binary.BigEndian.Uint64(data[index : index+8])
+	helloPkg.SenderSystemId = systemid & 0xffffffffffff0000 >> 16
 	index += 6
 
 	helloPkg.HoldingTimer = uint16(binary.BigEndian.Uint16(data[index : index+2]))
@@ -296,20 +257,20 @@ func (isis *ISIS) decodeHelloPDU(data []byte) (int, error) {
 	switch isis.CH.PDUType {
 
 	case IIHL1, IIHL2: //L1/L2 IIH
-		// fmt.Println("IIHL1/ IIHL2")
+
 		answerPkg := IIHvL1_L2Lan{
 			Base: helloPkg,
 		}
 		answerPkg.Priority = data[index] & 0x7f
 		index++
 
-		bytes = []byte{0}
-		bytes = append(bytes, data[index:index+7]...)
-		answerPkg.DesignatedSystemId = binary.BigEndian.Uint64(bytes)
+		systemid := binary.BigEndian.Uint64(data[index : index+8])
+		answerPkg.DesignatedSystemId.SystemId = systemid & 0xffffffffffff0000 >> 16
+		answerPkg.DesignatedSystemId.PseudonodeId = byte(systemid & 0xff00 >> 8)
+
 		index += 7
 
 		isis.SpecificHeader = answerPkg
-		break
 
 	case IIHP2P: //P2P IIH
 		answerPkg := IIHvP2P{
@@ -319,24 +280,16 @@ func (isis *ISIS) decodeHelloPDU(data []byte) (int, error) {
 		index++
 
 		isis.SpecificHeader = answerPkg
-		break
 
 	default:
 		fmt.Printf("UNKNOWN TYPE HELLO PDU\n")
-		return 0, errors.New("Internal error Parsing IIH")
+		return 0, errors.New("internal error Parsing IIH")
 	}
 
 	return index, nil
 }
 
 func (isis *ISIS) decodeLspPDU(data []byte) int {
-
-	// fmt.Printf("LSP PDU \t")
-	// for i := 0; i < 10; i++ {
-	// 	fmt.Printf("%x ", data[i])
-	// }
-	// fmt.Printf("\n")
-
 	index := 0
 
 	lsp := ISISLsp{}
@@ -348,8 +301,7 @@ func (isis *ISIS) decodeLspPDU(data []byte) int {
 	index += 2
 
 	lspid := binary.BigEndian.Uint64(data[index : index+8])
-	lsp.Id.SystemId = ((lspid & 0xffffffffffff0000) / 256 / 256)
-	// fmt.Printf("\n%x\n", lsp.LspId.SystemId)
+	lsp.Id.SystemId = (lspid & 0xffffffffffff0000) >> 16
 	lsp.Id.PseudonodeId = data[index+6]
 	lsp.Id.FragmentNum = data[index+7]
 	index += 8
@@ -372,13 +324,6 @@ func (isis *ISIS) decodeLspPDU(data []byte) int {
 }
 
 func (isis *ISIS) decodeCsnpPDU(data []byte) int {
-
-	// fmt.Printf("\n\nCSNP PDU \t")
-	// for i := 0; i < 10; i++ {
-	// 	fmt.Printf("%x ", data[i])
-	// }
-	// fmt.Printf("\n")
-
 	index := 0
 
 	snp := ISISCsnp{}
@@ -387,18 +332,18 @@ func (isis *ISIS) decodeCsnpPDU(data []byte) int {
 	index += 2
 
 	sourceid := binary.BigEndian.Uint64(data[index : index+8])
-	snp.SourceId.Id = sourceid & 0xffffffffffff0000 / 256 / 256
+	snp.SourceId.Id = sourceid & 0xffffffffffff0000 >> 16
 	snp.SourceId.CircuitId = data[index+6]
 	index += 7
 
 	startid := binary.BigEndian.Uint64(data[index : index+8])
-	snp.StartLspId.SystemId = startid & 0xffffffffffff0000 / 256 / 256
+	snp.StartLspId.SystemId = startid & 0xffffffffffff0000 >> 16
 	snp.StartLspId.PseudonodeId = data[index+6]
 	snp.StartLspId.FragmentNum = data[index+7]
 	index += 8
 
 	endid := binary.BigEndian.Uint64(data[index : index+8])
-	snp.EndLspId.SystemId = endid & 0xffffffffffff0000 / 256 / 256
+	snp.EndLspId.SystemId = endid & 0xffffffffffff0000 >> 16
 	snp.EndLspId.PseudonodeId = data[index+6]
 	snp.EndLspId.FragmentNum = data[index+7]
 	index += 8
@@ -408,7 +353,6 @@ func (isis *ISIS) decodeCsnpPDU(data []byte) int {
 }
 
 func (isis *ISIS) decodePsnpPDU(data []byte) int {
-
 	index := 0
 
 	snp := ISISPsnp{}
@@ -417,7 +361,7 @@ func (isis *ISIS) decodePsnpPDU(data []byte) int {
 	index += 2
 
 	sourceid := binary.BigEndian.Uint64(data[index : index+8])
-	snp.SourceId.Id = sourceid & 0xffffffffffff0000 / 256 / 256
+	snp.SourceId.Id = sourceid & 0xffffffffffff0000 >> 16
 	snp.SourceId.CircuitId = data[index+6]
 	index += 7
 
@@ -426,13 +370,6 @@ func (isis *ISIS) decodePsnpPDU(data []byte) int {
 }
 
 func (isis *ISIS) decodeCLV(data []byte) (int, error) {
-
-	// fmt.Printf("CLV PDU \t")
-	// for i := 0; i < 10; i++ {
-	// 	fmt.Printf("%x ", data[i])
-	// }
-	// fmt.Printf("\n")
-
 	index := 0
 
 	for len(data) > index {
@@ -447,41 +384,37 @@ func (isis *ISIS) decodeCLV(data []byte) (int, error) {
 
 		case AreaAddresses:
 			cur.Value = string(data[index : index+int(cur.Length)])
-			break
 
 		case RestartSignaling:
 			cur.Value = string(data[index : index+int(cur.Length)])
-			break
 
 		case ISNeighborsMac:
 			cur.Value = string(data[index : index+int(cur.Length)])
-			break
 
 		case Hostname:
 			cur.Value = string(data[index : index+int(cur.Length)])
-			break
 
 		case ISNeighbors:
 			cur.Value = string(data[index : index+int(cur.Length)])
-			break
 
 		case ESNeighbors:
 			cur.Value = string(data[index : index+int(cur.Length)])
-			break
 
 		case LspEntries:
-			fmt.Println("LSP ENTRIES", cur.Length/16)
 			var arr []LspEntry
 
+			var lspEntryLen byte = 16
+			entryCnt := cur.Length / lspEntryLen
+
 			ind := index
-			for counter := 0; counter < int(cur.Length)/16; counter++ {
+			for counter := 0; counter < int(entryCnt); counter++ {
 
 				var tmp LspEntry
 				tmp.RemainingLifetime = binary.BigEndian.Uint16(data[ind : ind+2])
 				ind += 2
 
 				id := binary.BigEndian.Uint64(data[ind : ind+8])
-				tmp.Id.SystemId = id & 0xffffffffffff0000 / 256 / 256
+				tmp.Id.SystemId = id & 0xffffffffffff0000 >> 16
 				tmp.Id.PseudonodeId = data[ind+6]
 				tmp.Id.FragmentNum = data[ind+7]
 				ind += 8
@@ -495,22 +428,17 @@ func (isis *ISIS) decodeCLV(data []byte) (int, error) {
 				arr = append(arr, tmp)
 
 			}
-			fmt.Println("IND: \t", ind)
 			cur.Value = arr
-			break
 
 		case Padding:
-			break
 
 		default:
 			fmt.Printf("%v\t UNKNOWN CLV CODE\n", cur.Code)
-			return index, errors.New("Unknown CLV Code")
+			return index, errors.New("unknown CLV Code")
 		}
-		// fmt.Println(len(isis.VariableLengthFields), "\t", len(data), "\t", index)
+
 		index += int(cur.Length)
 	}
-
-	// log.Println("HERE")
 	return index, nil
 }
 
@@ -532,7 +460,7 @@ func (isis *ISIS) CanDecode() gopacket.LayerClass {
 func decodeISIS(data []byte, p gopacket.PacketBuilder) error {
 
 	if len(data) < 27 {
-		return fmt.Errorf("Packet too smal for ISIS")
+		return fmt.Errorf("packet too smal for ISIS")
 	}
 
 	isis := &ISIS{}
