@@ -273,6 +273,13 @@ const (
 	Dot11TypeDataQOSCFAckPollNoData Dot11Type = 0x3e
 )
 
+// OSI type is an enumeration of OSI Intradomain Routing Protocol Discriminator.
+type OSIType uint8
+
+const (
+	OSITypeISIS OSIType = 0x83
+)
+
 // Decode a raw v4 or v6 IP packet.
 func decodeIPv4or6(data []byte, p gopacket.PacketBuilder) error {
 	version := data[0] >> 4
@@ -440,4 +447,6 @@ func initActualTypeData() {
 	USBTransportTypeMetadata[USBTransportTypeInterrupt] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSBInterrupt), Name: "Interrupt", LayerType: LayerTypeUSBInterrupt}
 	USBTransportTypeMetadata[USBTransportTypeControl] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSBControl), Name: "Control", LayerType: LayerTypeUSBControl}
 	USBTransportTypeMetadata[USBTransportTypeBulk] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSBBulk), Name: "Bulk", LayerType: LayerTypeUSBBulk}
+
+	OSITypeMetadata[OSITypeISIS] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeISIS), Name: "ISIS", LayerType: LayerTypeISIS}
 }

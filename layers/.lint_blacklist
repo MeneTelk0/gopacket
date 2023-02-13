@@ -18,6 +18,7 @@ mpls.go
 ndp.go
 ntp.go
 ospf.go
+isis.go
 pflog.go
 pppoe.go
 prism.go

@@ -148,6 +148,8 @@ var (
 	LayerTypeASFPresencePong              = gopacket.RegisterLayerType(144, gopacket.LayerTypeMetadata{Name: "ASFPresencePong", Decoder: gopacket.DecodeFunc(decodeASFPresencePong)})
 	LayerTypeERSPANII                     = gopacket.RegisterLayerType(145, gopacket.LayerTypeMetadata{Name: "ERSPAN Type II", Decoder: gopacket.DecodeFunc(decodeERSPANII)})
 	LayerTypeRADIUS                       = gopacket.RegisterLayerType(146, gopacket.LayerTypeMetadata{Name: "RADIUS", Decoder: gopacket.DecodeFunc(decodeRADIUS)})
+	LayerTypeOSI                          = gopacket.RegisterLayerType(147, gopacket.LayerTypeMetadata{Name: "OSI", Decoder: gopacket.DecodeFunc(decodeOSI)})
+	LayerTypeISIS                         = gopacket.RegisterLayerType(148, gopacket.LayerTypeMetadata{Name: "ISIS", Decoder: gopacket.DecodeFunc(decodeISIS)})
 )
 
 var (

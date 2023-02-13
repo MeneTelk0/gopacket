@@ -4,11 +4,12 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build ignore
 // +build ignore
 
 // This binary handles creating string constants and function templates for enums.
 //
-//  go run gen.go | gofmt > enums_generated.go
+//  go run gen2.go | gofmt > enums_generated.go
 package main
 
 import (
@@ -88,6 +89,7 @@ func main() {
 		{"ProtocolFamily", 256},
 		{"Dot11Type", 256},
 		{"USBTransportType", 256},
+		{"OSIType", 256},
 	}
 
 	fmt.Println("func init() {")
