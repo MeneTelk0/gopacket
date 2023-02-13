@@ -1,6 +1,7 @@
 package layers
 
 import (
+	"net"
 	"reflect"
 	"testing"
 
@@ -155,7 +156,9 @@ func TestPacketISISHello(t *testing.T) {
 				{
 					Code:   6,
 					Length: 6,
-					Value:  string([]byte{0x52, 0x54, 0x00, 0xcf, 0x73, 0x01}),
+					Value: []net.HardwareAddr{
+						[]byte{0x52, 0x54, 0x00, 0xcf, 0x73, 0x01},
+					},
 				},
 				{
 					Code:   8,

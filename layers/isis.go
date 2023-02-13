@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net"
 
 	"github.com/google/gopacket"
 )
@@ -382,6 +383,8 @@ func (isis *ISIS) decodeCLV(data []byte) (int, error) {
 		cur := &isis.VariableLengthFields[len(isis.VariableLengthFields)-1]
 		switch cur.Code {
 
+		case ProtocolsSupported:
+
 		case AreaAddresses:
 			cur.Value = string(data[index : index+int(cur.Length)])
 
@@ -389,7 +392,22 @@ func (isis *ISIS) decodeCLV(data []byte) (int, error) {
 			cur.Value = string(data[index : index+int(cur.Length)])
 
 		case ISNeighborsMac:
-			cur.Value = string(data[index : index+int(cur.Length)])
+			cur.Value = net.HardwareAddr(data[index:index])
+			var arr []net.HardwareAddr
+
+			var MacAddrLen byte = 6
+			entryCnt := cur.Length / MacAddrLen
+
+			ind := index
+			for counter := 0; counter < int(entryCnt); counter++ {
+
+				tmp := net.HardwareAddr(data[index : index+6])
+
+				ind += 6
+				arr = append(arr, tmp)
+
+			}
+			cur.Value = arr
 
 		case Hostname:
 			cur.Value = string(data[index : index+int(cur.Length)])
