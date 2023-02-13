@@ -277,6 +277,7 @@ const (
 type OSIType uint8
 
 const (
+	OSITypeESIS OSIType = 0x82
 	OSITypeISIS OSIType = 0x83
 )
 
@@ -448,5 +449,6 @@ func initActualTypeData() {
 	USBTransportTypeMetadata[USBTransportTypeControl] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSBControl), Name: "Control", LayerType: LayerTypeUSBControl}
 	USBTransportTypeMetadata[USBTransportTypeBulk] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSBBulk), Name: "Bulk", LayerType: LayerTypeUSBBulk}
 
+	OSITypeMetadata[OSITypeESIS] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeESIS), Name: "ESIS", LayerType: LayerTypeESIS}
 	OSITypeMetadata[OSITypeISIS] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeISIS), Name: "ISIS", LayerType: LayerTypeISIS}
 }
