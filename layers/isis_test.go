@@ -126,7 +126,7 @@ func TestPacketISISHello(t *testing.T) {
 				Reserved:                   0,
 				MaximumAreaAddresses:       0,
 			},
-			SpecificHeader: IIHvL1_L2Lan{
+			SpecificHeader: IIHvL1L2Lan{
 				Base: ISISHelloPkg{
 					CircuitType:    1,
 					SenderSystemId: 0x111111111111,
@@ -136,7 +136,7 @@ func TestPacketISISHello(t *testing.T) {
 				Priority: 0x40,
 				DesignatedSystemId: struct {
 					SystemId     uint64
-					PseudonodeId byte
+					PseudonodeId uint8
 				}{
 					SystemId:     0x111111111111,
 					PseudonodeId: 0x02,
@@ -146,12 +146,12 @@ func TestPacketISISHello(t *testing.T) {
 				{
 					Code:   1,
 					Length: 4,
-					Value:  string([]byte{0x3, 0x11, 0x11, 0x11}),
+					Value:  []byte{0x3, 0x11, 0x11, 0x11},
 				},
 				{
 					Code:   211,
 					Length: 3,
-					Value:  string([]byte{0x00, 0x00, 0x00}),
+					Value:  []byte{0x00, 0x00, 0x00},
 				},
 				{
 					Code:   6,
@@ -350,7 +350,7 @@ func TestPacketISISLsp(t *testing.T) {
 				{
 					Code:   1,
 					Length: 4,
-					Value:  string([]byte{0x3, 0x11, 0x11, 0x11}),
+					Value:  []byte{0x3, 0x11, 0x11, 0x11},
 				},
 				{
 					Code:   137,
@@ -360,12 +360,12 @@ func TestPacketISISLsp(t *testing.T) {
 				{
 					Code:   2,
 					Length: 12,
-					Value:  string([]byte{0, 0x0a, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x02}),
+					Value:  []byte{0, 0x0a, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x02},
 				},
 				{
 					Code:   3,
 					Length: 10,
-					Value:  string([]byte{0, 0x80, 0x80, 0x80, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22}),
+					Value:  []byte{0, 0x80, 0x80, 0x80, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22},
 				},
 			},
 		}
@@ -383,7 +383,7 @@ func TestPacketISISLsp(t *testing.T) {
 			t.Errorf("ISIS packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
 		}
 	} else {
-		t.Error("No ISIS layer type found in packet")
+		t.Error("no ISIS layer type found in packet")
 	}
 }
 
@@ -401,7 +401,7 @@ func TestPacketISISCsnp(t *testing.T) {
 
 	p := gopacket.NewPacket(testPacketISISCsnp, LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+		t.Error("failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeOSI, LayerTypeISIS}, t)
 
@@ -423,7 +423,7 @@ func TestPacketISISCsnp(t *testing.T) {
 					PDULength: 83,
 					SourceId: struct {
 						Id        uint64
-						CircuitId byte
+						CircuitId uint8
 					}{
 						0x111111111111,
 						0,
@@ -494,6 +494,6 @@ func TestPacketISISCsnp(t *testing.T) {
 			t.Errorf("ISIS packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
 		}
 	} else {
-		t.Error("No ISIS layer type found in packet")
+		t.Error("no ISIS layer type found in packet")
 	}
 }

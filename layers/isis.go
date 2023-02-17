@@ -2,14 +2,13 @@ package layers
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 
 	"github.com/google/gopacket"
 )
 
-type ISISType byte
+type ISISType uint8
 
 const (
 	ISISHello                     ISISType = 1
@@ -19,31 +18,31 @@ const (
 )
 
 type PDUCommonHeader struct {
-	LengthIndicator            byte
-	VersionProtocolIdExtension byte
-	IdLength                   byte
+	LengthIndicator            uint8
+	VersionProtocolIdExtension uint8
+	IdLength                   uint8
 	PDUType                    SpecificHeaderType
-	Version                    byte
-	Reserved                   byte
-	MaximumAreaAddresses       byte
+	Version                    uint8
+	Reserved                   uint8
+	MaximumAreaAddresses       uint8
 }
 
-type SpecificHeaderType byte
+type SpecificHeaderType uint8
 
 const (
-	IIHL1  SpecificHeaderType = 15
-	IIHL2  SpecificHeaderType = 16
-	IIHP2P SpecificHeaderType = 17
-	L1LSP  SpecificHeaderType = 18
-	L2LSP  SpecificHeaderType = 20
-	L1CSNP SpecificHeaderType = 24
-	L2CSNP SpecificHeaderType = 25
-	L1PSNP SpecificHeaderType = 26
-	L2PSNP SpecificHeaderType = 27
+	IIHL1  SpecificHeaderType = 15 //Level-1 IS-IS Hello
+	IIHL2  SpecificHeaderType = 16 //Level-1 IS-IS Hello
+	IIHP2P SpecificHeaderType = 17 //P2P IS-IS Hello
+	L1LSP  SpecificHeaderType = 18 //Level-1 Link State PDU
+	L2LSP  SpecificHeaderType = 20 //Level-2 Link State PDU
+	L1CSNP SpecificHeaderType = 24 //Level-1 Complete Sequence Numbers PDU
+	L2CSNP SpecificHeaderType = 25 //Level-2 Complete Sequence Numbers PDU
+	L1PSNP SpecificHeaderType = 26 //Level-1 Partial Sequence Numbers PDU
+	L2PSNP SpecificHeaderType = 27 //Level-2 Partial Sequence Numbers PDU
 )
 
 // ///////////////////////////////////////////CLV TYPES
-type CLVCode byte
+type CLVCode uint8
 
 const (
 	AreaAddresses               CLVCode = 1
@@ -63,7 +62,7 @@ const (
 
 type CLV struct {
 	Code   CLVCode
-	Length byte
+	Length uint8
 	Value  interface{}
 }
 
@@ -78,25 +77,26 @@ type ISIS struct {
 
 // ///////////////////////////////////////////////HELLO PKG TYPES FOR SPECIFIC HEADER
 type ISISHelloPkg struct {
-	CircuitType    byte
+	CircuitType    uint8
 	SenderSystemId uint64
 	HoldingTimer   uint16
 	PDULength      uint16
 }
 
-type IIHvL1_L2Lan struct {
+// IS-IS Hello L1 L2 LAN
+type IIHvL1L2Lan struct {
 	Base     ISISHelloPkg
-	Priority byte
+	Priority uint8
 
 	DesignatedSystemId struct {
 		SystemId     uint64
-		PseudonodeId byte
+		PseudonodeId uint8
 	}
 }
 
 type IIHvP2P struct {
 	Base         ISISHelloPkg
-	LocalCircuit byte
+	LocalCircuit uint8
 }
 
 // ///////////////////////////////////////////////LSP PACKETS SPECIFIC HEADER
@@ -110,8 +110,8 @@ type LspEntry struct {
 
 type LspId struct {
 	SystemId     uint64
-	PseudonodeId byte
-	FragmentNum  byte
+	PseudonodeId uint8
+	FragmentNum  uint8
 }
 
 type ISISLsp struct {
@@ -123,17 +123,17 @@ type ISISLsp struct {
 	SequenceNumber uint32
 	Checksum       uint16
 
-	PartitionRepair byte
-	Attachment      byte
-	LSDBOverload    byte
-	IsType          byte
+	PartitionRepair uint8
+	Attachment      uint8
+	LSDBOverload    uint8
+	IsType          uint8
 }
 
 type ISISPsnp struct {
 	PDULength uint16
 	SourceId  struct {
 		Id        uint64
-		CircuitId byte
+		CircuitId uint8
 	}
 }
 
@@ -150,21 +150,20 @@ type ISISCsnp struct {
 func (i ISISType) String() string {
 	switch i {
 	case ISISHello:
-		return "Hello"
+		return "ISIS Hello"
 	case ISISCompleteSequenceNumberPDU:
-		return "ISISCompleteSequenceNumberPDU"
+		return "ISIS CompleteSequenceNumberPDU"
 	case ISISPartialSequenceNumberPDU:
-		return "ISISPartialSequenceNumberPDU"
+		return "ISIS PartialSequenceNumberPDU"
 	case ISISLinkStatePDU:
-		return "ISISLinkStatePDU"
+		return "ISIS LinkStatePDU"
 	default:
-		return "No Such ISIS Type"
+		return fmt.Sprintf("no such ISIS type: %d", i)
 	}
 }
 
 func (isis *ISIS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	var index int = 0
-	index += isis.decodeCommonHeader(data[0:])
+	index := isis.decodeCommonHeader(data[0:])
 
 	switch isis.CH.PDUType {
 	case IIHL1, IIHL2, IIHP2P: //IIH
@@ -191,8 +190,7 @@ func (isis *ISIS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 		index += add
 
 	default:
-		fmt.Printf("Specific HEADER PARSE ERROR\n")
-		return errors.New("unknown PDU TYPE")
+		return fmt.Errorf("unknown PDU type: %d", isis.CH.PDUType)
 	}
 
 	add, err := isis.decodeCLV(data[index:])
@@ -259,7 +257,7 @@ func (isis *ISIS) decodeHelloPDU(data []byte) (int, error) {
 
 	case IIHL1, IIHL2: //L1/L2 IIH
 
-		answerPkg := IIHvL1_L2Lan{
+		answerPkg := IIHvL1L2Lan{
 			Base: helloPkg,
 		}
 		answerPkg.Priority = data[index] & 0x7f
@@ -267,7 +265,7 @@ func (isis *ISIS) decodeHelloPDU(data []byte) (int, error) {
 
 		systemid := binary.BigEndian.Uint64(data[index : index+8])
 		answerPkg.DesignatedSystemId.SystemId = systemid & 0xffffffffffff0000 >> 16
-		answerPkg.DesignatedSystemId.PseudonodeId = byte(systemid & 0xff00 >> 8)
+		answerPkg.DesignatedSystemId.PseudonodeId = uint8(systemid & 0xff00 >> 8)
 
 		index += 7
 
@@ -283,10 +281,8 @@ func (isis *ISIS) decodeHelloPDU(data []byte) (int, error) {
 		isis.SpecificHeader = answerPkg
 
 	default:
-		fmt.Printf("UNKNOWN TYPE HELLO PDU\n")
-		return 0, errors.New("internal error Parsing IIH")
+		return 0, fmt.Errorf("no such ISIS Hello type: %d", isis.CH.PDUType)
 	}
-
 	return index, nil
 }
 
@@ -383,19 +379,20 @@ func (isis *ISIS) decodeCLV(data []byte) (int, error) {
 		cur := &isis.VariableLengthFields[len(isis.VariableLengthFields)-1]
 		switch cur.Code {
 
-		case ProtocolsSupported:
-
 		case AreaAddresses:
-			cur.Value = string(data[index : index+int(cur.Length)])
+			cur.Value = (data[index : index+int(cur.Length)])
 
-		case RestartSignaling:
-			cur.Value = string(data[index : index+int(cur.Length)])
+		case ISNeighbors:
+			cur.Value = (data[index : index+int(cur.Length)])
+
+		case ESNeighbors:
+			cur.Value = (data[index : index+int(cur.Length)])
 
 		case ISNeighborsMac:
 			cur.Value = net.HardwareAddr(data[index:index])
 			var arr []net.HardwareAddr
 
-			var MacAddrLen byte = 6
+			var MacAddrLen uint8 = 6
 			entryCnt := cur.Length / MacAddrLen
 
 			ind := index
@@ -409,19 +406,12 @@ func (isis *ISIS) decodeCLV(data []byte) (int, error) {
 			}
 			cur.Value = arr
 
-		case Hostname:
-			cur.Value = string(data[index : index+int(cur.Length)])
-
-		case ISNeighbors:
-			cur.Value = string(data[index : index+int(cur.Length)])
-
-		case ESNeighbors:
-			cur.Value = string(data[index : index+int(cur.Length)])
+		case Padding:
 
 		case LspEntries:
 			var arr []LspEntry
 
-			var lspEntryLen byte = 16
+			var lspEntryLen uint8 = 16
 			entryCnt := cur.Length / lspEntryLen
 
 			ind := index
@@ -448,13 +438,22 @@ func (isis *ISIS) decodeCLV(data []byte) (int, error) {
 			}
 			cur.Value = arr
 
-		case Padding:
+		case ProtocolsSupported:
+
+		case IpInterfaceAddress:
+			cur.Value = net.IP(data[index : index+int(cur.Length)])
+
+		case Hostname:
+			cur.Value = string(data[index : index+int(cur.Length)])
+
+		case RestartSignaling:
+			cur.Value = (data[index : index+int(cur.Length)])
 
 		default:
-			fmt.Printf("%v\t UNKNOWN CLV CODE\n", cur.Code)
-			return index, errors.New("unknown CLV Code")
+			// fmt.Printf("unknown CLV code: %d\n", cur.Code)
+			// panic("PANICCC\n")
+			return index, fmt.Errorf("unknown CLV code: %d", cur.Code)
 		}
-
 		index += int(cur.Length)
 	}
 	return index, nil
@@ -478,7 +477,7 @@ func (isis *ISIS) CanDecode() gopacket.LayerClass {
 func decodeISIS(data []byte, p gopacket.PacketBuilder) error {
 
 	if len(data) < 27 {
-		return fmt.Errorf("packet too smal for ISIS")
+		return fmt.Errorf("packet too smal for ISIS: %d", len(data))
 	}
 
 	isis := &ISIS{}
