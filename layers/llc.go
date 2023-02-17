@@ -64,6 +64,8 @@ func (l *LLC) NextLayerType() gopacket.LayerType {
 		return LayerTypeSNAP
 	case l.DSAP == 0x42 && l.SSAP == 0x42:
 		return LayerTypeSTP
+	case l.DSAP == 0xfe && l.SSAP == 0xfe:
+		return LayerTypeOSI
 	}
 	return gopacket.LayerTypeZero // Not implemented
 }

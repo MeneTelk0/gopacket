@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen2.go, don't edit manually
-// Generated at 2017-10-23 10:20:24.458771856 -0600 MDT m=+0.001159033
+// Generated at 2023-01-20 14:01:47.829824 +0300 MSK m=+0.000936209
 
 import (
 	"fmt"
@@ -23,6 +23,7 @@ func init() {
 	initUnknownTypesForProtocolFamily()
 	initUnknownTypesForDot11Type()
 	initUnknownTypesForUSBTransportType()
+	initUnknownTypesForOSIType()
 	initActualTypeData()
 }
 
@@ -429,6 +430,43 @@ func initUnknownTypesForUSBTransportType() {
 		USBTransportTypeMetadata[i] = EnumMetadata{
 			DecodeWith: &errorDecodersForUSBTransportType[i],
 			Name:       "UnknownUSBTransportType",
+		}
+	}
+}
+
+// Decoder calls OSITypeMetadata.DecodeWith's decoder.
+func (a OSIType) Decode(data []byte, p gopacket.PacketBuilder) error {
+	return OSITypeMetadata[a].DecodeWith.Decode(data, p)
+}
+
+// String returns OSITypeMetadata.Name.
+func (a OSIType) String() string {
+	return OSITypeMetadata[a].Name
+}
+
+// LayerType returns OSITypeMetadata.LayerType.
+func (a OSIType) LayerType() gopacket.LayerType {
+	return OSITypeMetadata[a].LayerType
+}
+
+type errorDecoderForOSIType int
+
+func (a *errorDecoderForOSIType) Decode(data []byte, p gopacket.PacketBuilder) error {
+	return a
+}
+func (a *errorDecoderForOSIType) Error() string {
+	return fmt.Sprintf("Unable to decode OSIType %d", int(*a))
+}
+
+var errorDecodersForOSIType [256]errorDecoderForOSIType
+var OSITypeMetadata [256]EnumMetadata
+
+func initUnknownTypesForOSIType() {
+	for i := 0; i < 256; i++ {
+		errorDecodersForOSIType[i] = errorDecoderForOSIType(i)
+		OSITypeMetadata[i] = EnumMetadata{
+			DecodeWith: &errorDecodersForOSIType[i],
+			Name:       "UnknownOSIType",
 		}
 	}
 }
